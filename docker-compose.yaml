@@ -10,4 +10,5 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5001:8080" # Порт 5000 на хосте будет перенаправлен на порт 80 в контейнере
+    network_mode: host
 
