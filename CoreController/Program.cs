@@ -1,12 +1,14 @@
 using CoreController.Commands;
+using CoreController.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddSignalR();
 
 builder.Services.AddControllers();
 
-builder.Services.AddSingleton<CommandRegistry>();
+builder.Services.AddCommandRegistry();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();

@@ -2,10 +2,6 @@
 using CoreController.Contracts;
 using CoreController.Utils;
 using Microsoft.AspNetCore.Mvc;
-using System.Net;
-using System.Net.Sockets;
-using System.Security.Cryptography;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace CoreController.Controllers
 {

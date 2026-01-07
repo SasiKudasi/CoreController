@@ -1,3 +1,5 @@
 <Solution>
-  <Project Path="CoreController/CoreController.csproj" />
+  <Folder Name="/Api/">
+    <Project Path="CoreController/CoreController.csproj" />
+  </Folder>
 </Solution>

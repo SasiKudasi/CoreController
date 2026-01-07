@@ -2,11 +2,14 @@
 {
     public class CommandRegistry
     {
-        private readonly Dictionary<string, ICommand> _commands = new();
-        public CommandRegistry()
+        private readonly Dictionary<string, ICommand> _commands;
+        public CommandRegistry(IEnumerable<ICommand> commands)
         {
-            var wake = new WakeOnLanCommand();
-            _commands[wake.Name] = wake;
+            _commands = new Dictionary<string, ICommand>();
+            foreach (var cmd in commands)
+            {
+                _commands[cmd.Name] = cmd;
+            }
         }
 
 
