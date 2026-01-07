@@ -1,7 +1,10 @@
-﻿using CoreController.Contracts;
+﻿using CoreController.Commands;
+using CoreController.Contracts;
+using CoreController.Utils;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace CoreController.Controllers
@@ -10,67 +13,43 @@ namespace CoreController.Controllers
     [Route("[controller]")]
     public class AlisaController : ControllerBase
     {
+        private readonly CommandRegistry _registry;
         private readonly ILogger<AlisaController> _logger;
-        public AlisaController(ILogger<AlisaController> logger)
+        public AlisaController(ILogger<AlisaController> logger, CommandRegistry registry)
         {
             _logger = logger;
+            _registry = registry;
         }
 
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] YandexRequest request)
         {
-            string walAddress = Environment.GetEnvironmentVariable("WAL_ADDRESS");
-            var text = "";
-            var cmd = request.Request.Command.ToLower();
-            if (cmd.Contains("включи") && cmd.Contains("пк"))
+            _logger.LogInformation($"Received command: {request.Request.Command}");
+            var response = new AlisaResponse
             {
-                _logger.LogInformation("Отправка запроса на включение");
-                WakeOnLan(walAddress);
-                text = "готово";
-
-            }
-            else
-            {
-                text = "Неизвестная команда";
-            }
-
-            var response = new
-            {
-                version = "1.0",
-                session = new
+                Version = "1.0",
+                Session = request.Session,
+                Response = new Response
                 {
-                    session_id = request.Session.session_id,
-                    user_id = request.Session.User.user_id
-                },
-                response = new
-                {
-                    text,
-                    end_session = false
+                   End_Session = false,
+                   Text = ""
                 }
-            };
+            };        
+
+            if (request.Session.New)
+            {
+                response.Response.Text = "Привет!";
+                return Ok(response);
+            }
+
+            var cmdKey =  CommandParser.ParseCommand(request.Request.Command);
+            var command = _registry.GetCommand(cmdKey);
+            response.Response.Text = command != null
+            ? await command.ExecuteAsync()
+            : "Неизвестная команда";
+
             return Ok(response);
 
-        }
-
-        private void WakeOnLan(string macAddress)
-        {
-
-            byte[] mac = macAddress
-                .Split(':')
-                .Select(b => Convert.ToByte(b, 16))
-                .ToArray();
-            _logger.LogInformation($"МАК АДРЕС :  {macAddress}");
-
-            byte[] packet = new byte[102];
-            for (int i = 0; i < 6; i++) packet[i] = 0xFF;
-            for (int i = 1; i <= 16; i++) Array.Copy(mac, 0, packet, i * 6, 6);
-
-            using (UdpClient client = new UdpClient())
-            {
-                client.EnableBroadcast = true;
-                var bts =  client.Send(packet, packet.Length, new IPEndPoint(IPAddress.Broadcast, 9));
-                _logger.LogInformation($"Bytes send :  {bts}");
-            }
         }
     }
 }
