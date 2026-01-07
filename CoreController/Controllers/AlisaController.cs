@@ -27,8 +27,8 @@ namespace CoreController.Controllers
                 version = "1.0",
                 session = new
                 {
-                    session_id = request.Session.SessionId,
-                    user_id = request.Session.User.UserId
+                    session_id = request.Session.session_id,
+                    user_id = request.Session.User.user_id
                 },
                 response = new
                 {
