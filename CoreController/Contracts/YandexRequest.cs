@@ -9,13 +9,13 @@ public class YandexRequest
 public class Session
 {
     public bool New { get; set; }
-    public string SessionId { get; set; }
+    public string session_id { get; set; }
     public User User { get; set; }
 }
 
 public class User
 {
-    public string UserId { get; set; }
+    public string user_id { get; set; }
 }
 
 public class Request
@@ -23,3 +23,7 @@ public class Request
     public string Command { get; set; }
     public string Type { get; set; }
 }
+
+
+
+
