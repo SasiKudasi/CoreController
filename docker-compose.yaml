@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  core_controller:
+    container_name: core_controller
+    env_file:
+      - ./CoreController/.env
+    build:
+      context: ./CoreController # Путь до папки с Dockerfile для бэкенда
+      dockerfile: Dockerfile
+    ports:
+      - "5001:8080" # Порт 5000 на хосте будет перенаправлен на порт 80 в контейнере
+
