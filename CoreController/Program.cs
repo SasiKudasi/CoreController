@@ -1,5 +1,6 @@
 using CoreController.Commands;
 using CoreController.Extensions;
+using CoreController.WebSocket;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,5 +30,5 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-
+app.MapHub<AgentHub>("/agent");
 app.Run();
