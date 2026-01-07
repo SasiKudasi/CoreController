@@ -10,16 +10,28 @@ namespace CoreController.Controllers
     [Route("[controller]")]
     public class AlisaController : ControllerBase
     {
+        private readonly ILogger<AlisaController> _logger;
+        public AlisaController(ILogger<AlisaController> logger)
+        {
+            _logger = logger;
+        }
 
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] YandexRequest request)
         {
             string walAddress = Environment.GetEnvironmentVariable("WAL_ADDRESS");
-
+            var text = "";
             var cmd = request.Request.Command.ToLower();
             if (cmd.Contains("включи") && cmd.Contains("пк"))
             {
+                _logger.LogInformation("Отправка запроса на включение");
                 WakeOnLan(walAddress);
+                text = "готово";
+
+            }
+            else
+            {
+                text = "Неизвестная команда";
             }
 
             var response = new
@@ -32,20 +44,22 @@ namespace CoreController.Controllers
                 },
                 response = new
                 {
-                    text = "готово",
+                    text,
                     end_session = false
                 }
             };
-
             return Ok(response);
+
         }
 
         private void WakeOnLan(string macAddress)
         {
+
             byte[] mac = macAddress
                 .Split(':')
                 .Select(b => Convert.ToByte(b, 16))
                 .ToArray();
+            _logger.LogInformation($"МАК АДРЕС :  {macAddress}");
 
             byte[] packet = new byte[102];
             for (int i = 0; i < 6; i++) packet[i] = 0xFF;
@@ -54,7 +68,8 @@ namespace CoreController.Controllers
             using (UdpClient client = new UdpClient())
             {
                 client.EnableBroadcast = true;
-                client.Send(packet, packet.Length, new IPEndPoint(IPAddress.Broadcast, 9));
+                var bts =  client.Send(packet, packet.Length, new IPEndPoint(IPAddress.Broadcast, 9));
+                _logger.LogInformation($"Bytes send :  {bts}");
             }
         }
     }
