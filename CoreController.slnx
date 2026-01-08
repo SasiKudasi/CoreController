@@ -2,4 +2,5 @@
   <Folder Name="/Api/">
     <Project Path="CoreController/CoreController.csproj" />
   </Folder>
+  <Project Path="AgentClient/AgentClient.csproj" Id="89db454f-359b-4501-8bbd-2d8c812adb39" />
 </Solution>
