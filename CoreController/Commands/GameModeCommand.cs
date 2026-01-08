@@ -4,21 +4,20 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace CoreController.Commands
 {
-    public class WorkModeCommand : ICommand
+    public class GameModeCommand : ICommand
     {
-        public string Name => "work_mode";
+        public string Name => "game_mode";
         private readonly IHubContext<AgentHub> _hub;
 
-        public WorkModeCommand(IHubContext<AgentHub> hub)
+        public GameModeCommand(IHubContext<AgentHub> hub)
         {
             _hub = hub;
         }
-
         public async Task<string> ExecuteAsync()
         {
-            var cmd = new AgentCommand("work_apps");
+            var cmd = new AgentCommand("game_apps");
             await _hub.Clients.Group("home-pc").SendAsync("ReceiveCommand", cmd);
-            return "Запускаю dev mode";
+            return "Запускаю game mode";
         }
     }
 }

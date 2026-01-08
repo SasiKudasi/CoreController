@@ -8,6 +8,8 @@ namespace CoreController.Extensions
         {
             services.AddSingleton<ICommand, WakeOnLanCommand>();
             services.AddSingleton<ICommand, WorkModeCommand>();
+            services.AddSingleton<ICommand, GameModeCommand>();
+            services.AddSingleton<ICommand, RelaxModeCommand>();
 
             services.AddSingleton<CommandRegistry>();
             return services;
