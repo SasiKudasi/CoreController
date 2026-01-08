@@ -5,7 +5,6 @@ using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 
 
-
 var config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: false)
     .Build();
@@ -21,35 +20,26 @@ var connection = new HubConnectionBuilder()
 
 var programsSection = config.GetSection("Programs").Get<Dictionary<string, List<string>>>();
 
+var agentState = new AgentState();
 
 
 var programs = new ProgramRegistry(programsSection);
+
+var appLauncher = new AppLauncher(programs);
 connection.On<AgentCommand>("ReceiveCommand", (cmd) =>
 {
-    var paths = programs.GetPrograms(cmd.Type);
-    if (paths is not null)
+    if (agentState.AgentMode != cmd.Type)
     {
-        foreach (var path in paths)
+        if(!string.IsNullOrEmpty(agentState.AgentMode))
         {
-            Task.Run(() =>
-            {
-                try
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = path,
-                        UseShellExecute = true,
-                        WindowStyle = ProcessWindowStyle.Normal,
-                        CreateNoWindow = false
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[Agent] Failed to start {path}: {ex.Message}");
-                }
-            });
-
+            appLauncher.KillApps(agentState.AgentMode);
         }
+        appLauncher.StartApps(cmd.Type);
+        agentState.AgentMode = cmd.Type;
+    }
+    else
+    {
+        Console.WriteLine($"[Agent] This mode is running: {cmd.Type}");
     }
 });
 
