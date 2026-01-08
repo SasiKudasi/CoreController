@@ -2,62 +2,119 @@
 using AgentClient.Models;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
-using System.Diagnostics;
 
+internal static class Program
+{
+    private static NotifyIcon _trayIcon;
+    private static HubConnection _connection;
+    private static AgentState _agentState;
+    private static AppLauncher _appLauncher;
 
-var config = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", optional: false)
-    .Build();
+    [STAThread]
+    private static void Main()
+    {
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
 
-var serverUrl = config["ServerUrl"];
-var agentId = config["AgentId"];
+        _trayIcon = new NotifyIcon()
+        {
+            Icon = new Icon("Resources/favicon.ico"),
+            Text = "Agent Client: Connecting...",
+            Visible = true
+        };
 
+        var menu = new ContextMenuStrip();
+        var statusItem = new ToolStripMenuItem("Status: Connecting...");
+        menu.Items.Add(statusItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Выход", null, (s, e) => Application.Exit());
+        _trayIcon.ContextMenuStrip = menu;
 
-var connection = new HubConnectionBuilder()
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false)
+            .Build();
+
+        var serverUrl = config["ServerUrl"];
+        var agentId = config["AgentId"];
+        var programsSection = config.GetSection("Programs").Get<Dictionary<string, List<string>>>();
+
+        _agentState = new AgentState();
+        var programs = new ProgramRegistry(programsSection);
+        _appLauncher = new AppLauncher(programs);
+
+        _connection = new HubConnectionBuilder()
             .WithUrl(serverUrl)
             .WithAutomaticReconnect()
             .Build();
 
-var programsSection = config.GetSection("Programs").Get<Dictionary<string, List<string>>>();
-
-var agentState = new AgentState();
-
-
-var programs = new ProgramRegistry(programsSection);
-
-var appLauncher = new AppLauncher(programs);
-connection.On<AgentCommand>("ReceiveCommand", (cmd) =>
-{
-    if (agentState.AgentMode != cmd.Type)
-    {
-        NotificationManager.ShowToastNotification("Agent Client", $"Starting mode: {cmd.Type}");
-
-        if (!string.IsNullOrEmpty(agentState.AgentMode))
+        _connection.Reconnecting += error =>
         {
-            appLauncher.KillApps(agentState.AgentMode);
-        }
-        appLauncher.StartApps(cmd.Type);
-        agentState.AgentMode = cmd.Type;
+            _trayIcon.Text = "Agent Client: Reconnecting...";
+            statusItem.Text = "Status: Reconnecting...";
+            return Task.CompletedTask;
+        };
+
+        _connection.Reconnected += connectionId =>
+        {
+            _trayIcon.Text = "Agent Client: Connected";
+            statusItem.Text = "Status: Connected";
+            NotificationManager.ShowToastNotification("Agent Client", "Reconnected to server!");
+            return Task.CompletedTask;
+        };
+
+        _connection.Closed += error =>
+        {
+            _trayIcon.Text = "Agent Client: Disconnected";
+            statusItem.Text = "Status: Disconnected";
+            NotificationManager.ShowToastNotification("Agent Client", "Disconnected from server.");
+            return Task.CompletedTask;
+        };
+
+        _connection.On<AgentCommand>("ReceiveCommand", cmd =>
+        {
+            if (_agentState.AgentMode != cmd.Type)
+            {
+                NotificationManager.ShowToastNotification("Agent Client", $"Starting mode: {cmd.Type}");
+                if (!string.IsNullOrEmpty(_agentState.AgentMode))
+                    _appLauncher.KillApps(_agentState.AgentMode);
+
+                _appLauncher.StartApps(cmd.Type);
+                _agentState.AgentMode = cmd.Type;
+            }
+        });
+
+        Task.Run(async () => await ConnectWithRetries(_connection, agentId, statusItem));
+
+        Application.Run(); 
     }
-    else
+
+    private static async Task ConnectWithRetries(HubConnection connection, string agentId, ToolStripMenuItem item, int maxRetries = 10, int delaySeconds = 5)
     {
-        Console.WriteLine($"[Agent] This mode is running: {cmd.Type}");
+        int attempt = 0;
+        while (attempt < maxRetries)
+        {
+            try
+            {
+                await connection.StartAsync();
+                if (connection.State == HubConnectionState.Connected)
+                {
+                    _trayIcon.Text = "Agent Client: Connected";
+                    item.Text = "Status: Connected";
+                    NotificationManager.ShowToastNotification("Agent Client", "Connected to server!");
+                    await connection.InvokeAsync("Register", agentId);
+                    return;
+                }
+            }
+            catch
+            {
+            }
+
+            attempt++;
+            _trayIcon.Text = $"Agent Client: Connecting... (Attempt {attempt})";
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+        }
+
+        _trayIcon.Text = "Agent Client: Failed to connect";
+        NotificationManager.ShowToastNotification("Agent Client", "Failed to connect after multiple attempts.");
     }
-});
-
-
-await connection.StartAsync();
-if (connection.State == HubConnectionState.Connected)
-{
-    NotificationManager.ShowToastNotification("Agent Client", "Successfully connected to server.");
-    Console.WriteLine("[Agent] Successfully connected to server!");
 }
-else
-{
-    NotificationManager.ShowToastNotification("Agent Client", "Connection failed or not established.");
-
-    Console.WriteLine("[Agent] Connection failed or not established.");
-}
-
-await connection.InvokeAsync("Register", agentId);
-await Task.Delay(-1);
