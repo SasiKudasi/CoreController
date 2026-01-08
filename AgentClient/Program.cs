@@ -30,7 +30,9 @@ connection.On<AgentCommand>("ReceiveCommand", (cmd) =>
 {
     if (agentState.AgentMode != cmd.Type)
     {
-        if(!string.IsNullOrEmpty(agentState.AgentMode))
+        NotificationManager.ShowToastNotification("Agent Client", $"Starting mode: {cmd.Type}");
+
+        if (!string.IsNullOrEmpty(agentState.AgentMode))
         {
             appLauncher.KillApps(agentState.AgentMode);
         }
@@ -47,10 +49,13 @@ connection.On<AgentCommand>("ReceiveCommand", (cmd) =>
 await connection.StartAsync();
 if (connection.State == HubConnectionState.Connected)
 {
+    NotificationManager.ShowToastNotification("Agent Client", "Successfully connected to server.");
     Console.WriteLine("[Agent] Successfully connected to server!");
 }
 else
 {
+    NotificationManager.ShowToastNotification("Agent Client", "Connection failed or not established.");
+
     Console.WriteLine("[Agent] Connection failed or not established.");
 }
 
